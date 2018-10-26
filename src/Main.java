@@ -1,6 +1,5 @@
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.Scanner;
 
 public class Main {
@@ -19,8 +18,9 @@ public class Main {
     private ArrayList<ArrayList<Point>> currentProfiles;
     private ArrayList<ArrayList<Integer>> controlMatrix;
     private int proportionality;
-    private int M;
-    private int R;
+    private double M;
+    private double R;
+    private double G;
 
     /**
      * Order of input
@@ -34,7 +34,7 @@ public class Main {
         ArrayList<Point> arrayList = new ArrayList<>();
 
         System.out.println("All Profiles in cyclic order, start from lower left");
-        System.out.println("Enter coordinates Of Zero Profile");
+
         //Taking Input for Zero Profile
         for (int i = 0; i < 3; i++) {
             double x = sc.nextDouble();
@@ -44,8 +44,8 @@ public class Main {
         }
         result.add(arrayList);
 
-        System.out.println("Enter coordinates of profiles in order: " +
-                "small positive, small negative, medium positive, medium negative");
+      //  System.out.println("Enter coordinates of profiles in order: " +
+        //        "small positive, small negative, medium positive, medium negative");
         //Taking input for all other profiles (assumption trapeziums)
         for (int i=0;i<N-1;i++) {
             arrayList = new ArrayList<>();
@@ -57,7 +57,6 @@ public class Main {
             }
             result.add(arrayList);
 
-                System.out.println("Next Profile........");
         }
         return result;
     }
@@ -83,9 +82,16 @@ public class Main {
         proportionality = 1;
         M = 1;
         R = 1;
+        G = 9.8;
     }
 
-    public double fuzzy(double initialTheta, double initialOmega) {
+    /**
+     * Returns angular acceleration produced by current based on profiles
+     */
+    public double fuzzy(double initialTheta, double initialOmega, int K, double Mass, double Rad, boolean gravity) {
+        M = Mass;
+        proportionality = K;
+        R = Rad;
         ArrayList<Double> thetaIntersections = findIntersections(thetaProfiles, initialTheta);
         System.out.println(thetaIntersections);
         ArrayList<Double> omegaIntersections = findIntersections(omegaProfiles, initialOmega);
@@ -93,7 +99,12 @@ public class Main {
         Double current = calculate(thetaIntersections, omegaIntersections, currentProfiles);
         System.out.println(current);
         double torque = proportionality*current;
-        double angularAcceleration = torque/(M*R*R);
+        double angularAcceleration = 0.0;
+        if (gravity) {
+            angularAcceleration = (torque-M*G*R*Math.sin(initialTheta))/(M*R*R);
+        } else {
+            angularAcceleration = torque/(M*R*R);
+        }
         return angularAcceleration;
     }
 
@@ -107,13 +118,12 @@ public class Main {
             for (int j=0;j<omegaIntersections.size();j++) {
                 if (thetaIntersections.get(i) != 0.0 && omegaIntersections.get(j) != 0.0) {
                     double val = Math.min(thetaIntersections.get(i), omegaIntersections.get(j));
-                 //   System.out.println("i="+i+" j="+j+" min="+val);
                     //Control Matrix determines which current profile to use
                     int profileIndex = controlMatrix.get(i).get(j);
-                 //   System.out.println("Profile Index = "+profileIndex);
+                    System.out.println("profile="+profileIndex);
                     ArrayList<Double> temp = findIntersection(currentProfiles.get(profileIndex), val, 'x');
+                    System.out.println("TEMP="+temp);
                     //Creating Trapezoid
-                 //   System.out.println("TEMP="+temp);
                     Point p1 = currentProfiles.get(profileIndex).get(0);
                     arrayList.add(p1);
                     arrayList.add(new Point(temp.get(0), val));
@@ -168,8 +178,13 @@ public class Main {
                 Point p2 = profile.get(i+1);
                 double m = slope(p2,p1);
                 double intersection = p1.y+m*(initial-p1.x);
-                if (intersection>0&&intersection<1)
-                    return new ArrayList<>(Arrays.asList(intersection));
+                if (intersection>0&&intersection<=1) {
+                    if (m!=0) {
+                        return new ArrayList<>(Arrays.asList(intersection));
+                    } else if(m==0&&initial>=Math.min(p1.x,p2.x)&&initial<=Math.max(p1.x,p2.x)) {
+                        return new ArrayList<>(Arrays.asList(intersection));
+                    }
+                }
             }
             return null;
         } else {
@@ -183,9 +198,7 @@ public class Main {
                 } else if (m==0) {
                     continue;
                 } else {
-           //         System.out.println("HERE!");
                     double intersectionX = p1.x+(initial-p1.y)/m;
-           //         System.out.println("inter="+intersectionX);
                     linkedHashSet.add(intersectionX);
                 }
             }
@@ -205,6 +218,7 @@ public class Main {
 /**
  1
  1
+
  -5 0
  0 1
  5 0
@@ -216,6 +230,9 @@ public class Main {
  -5.5 1
  -2.5 1
  0 0
+
+
+
  -1.43 0
  0 1
  1.43 0
@@ -227,6 +244,8 @@ public class Main {
  -3.43 1
  -1.43 1
  0 0
+
+
  -1 0
  0 1
  1 0
@@ -246,4 +265,8 @@ public class Main {
  -6 1
  -4 1
  -2 0
+ */
+
+/**
+
  */
